@@ -25,6 +25,8 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::convert::TryFrom;
 use std::hash::Hash;
 use std::io::{Read, Write};
+use std::rc::Rc;
+use std::sync::Arc;
 
 /// This uses the "size-prefixed binary protocol".
 /// https://ocaml.janestreet.com/ocaml-core/v0.13/doc/async_unix/Async_unix/Writer/index.html#val-write_bin_prot
@@ -109,6 +111,18 @@ impl<T: BinProtWrite> BinProtWrite for Option<T> {
 }
 
 impl<T: BinProtWrite> BinProtWrite for Box<T> {
+    fn binprot_write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
+        self.as_ref().binprot_write(w)
+    }
+}
+
+impl<T: BinProtWrite> BinProtWrite for Rc<T> {
+    fn binprot_write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
+        self.as_ref().binprot_write(w)
+    }
+}
+
+impl<T: BinProtWrite> BinProtWrite for Arc<T> {
     fn binprot_write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
         self.as_ref().binprot_write(w)
     }
@@ -325,6 +339,26 @@ impl<T: BinProtRead> BinProtRead for Box<T> {
     {
         let v = T::binprot_read(r)?;
         Ok(Box::new(v))
+    }
+}
+
+impl<T: BinProtRead> BinProtRead for Rc<T> {
+    fn binprot_read<R: Read + ?Sized>(r: &mut R) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        let v = T::binprot_read(r)?;
+        Ok(Rc::new(v))
+    }
+}
+
+impl<T: BinProtRead> BinProtRead for Arc<T> {
+    fn binprot_read<R: Read + ?Sized>(r: &mut R) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        let v = T::binprot_read(r)?;
+        Ok(Arc::new(v))
     }
 }
 
