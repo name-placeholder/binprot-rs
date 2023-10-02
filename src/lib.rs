@@ -73,6 +73,12 @@ impl BinProtWrite for Nat0 {
     }
 }
 
+impl BinProtWrite for u64 {
+    fn binprot_write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
+        int::write_nat0(w, *self)
+    }
+}
+
 impl BinProtWrite for i64 {
     fn binprot_write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
         int::write_i64(w, *self as i64)
@@ -262,6 +268,16 @@ impl BinProtRead for Nat0 {
     {
         let u64 = int::read_nat0(r)?;
         Ok(Nat0(u64))
+    }
+}
+
+impl BinProtRead for u64 {
+    fn binprot_read<R: Read + ?Sized>(r: &mut R) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        let u64 = int::read_nat0(r)?;
+        Ok(u64)
     }
 }
 
