@@ -88,7 +88,7 @@ fn breakfast4() {
 
 #[derive(BinProtWrite, BinProtRead, Debug, PartialEq)]
 struct BreakfastItem {
-    name: String,
+    name: binprot::SmallString1k,
     quantity: f64,
     large: bool,
 }
@@ -97,13 +97,13 @@ struct BreakfastItem {
 fn breakfast5() {
     let expected = [3, 101, 103, 103, 111, 18, 131, 192, 202, 33, 9, 64, 1];
     test_roundtrip(
-        BreakfastItem { name: "egg".to_string(), quantity: 3.1415, large: true },
+        BreakfastItem { name: "egg".into(), quantity: 3.1415, large: true },
         13,
         Some(&expected),
     );
     let expected = [9, 99, 114, 111, 105, 115, 115, 97, 110, 116, 0, 0, 0, 0, 128, 28, 200, 192, 0];
     test_roundtrip(
-        BreakfastItem { name: "croissant".to_string(), quantity: -12345., large: false },
+        BreakfastItem { name: "croissant".into(), quantity: -12345., large: false },
         19,
         Some(&expected),
     );
@@ -112,7 +112,7 @@ fn breakfast5() {
         177, 65, 0,
     ];
     test_roundtrip(
-        BreakfastItem { name: "PainAuChocolat".to_string(), quantity: 299792458.0, large: false },
+        BreakfastItem { name: "PainAuChocolat".into(), quantity: 299792458.0, large: false },
         24,
         Some(&expected),
     );
@@ -149,13 +149,13 @@ fn breakfast6() {
 
 #[test]
 fn breakfast7() {
-    let price_and_quantities: std::collections::HashMap<String, (i64, f64)> =
+    let price_and_quantities: std::collections::HashMap<binprot::SmallString1k, (i64, f64)> =
         [("croissant", (4, 1.23)), ("JusDOrange", (1, 2.34)), ("PainAuChocolat", (2, 1.45))]
             .iter()
-            .map(|(x, y)| (x.to_string(), *y))
+            .map(|(x, y)| (x.to_string().into(), *y))
             .collect();
     test_roundtrip(price_and_quantities.clone(), 64, None);
-    let price_and_quantities: std::collections::BTreeMap<String, (i64, f64)> =
+    let price_and_quantities: std::collections::BTreeMap<binprot::SmallString1k, (i64, f64)> =
         price_and_quantities.into_iter().collect();
     test_roundtrip(price_and_quantities, 64, None);
 }
@@ -201,28 +201,28 @@ fn breakfast_rec() {
 
 #[derive(BinProtRead, BinProtWrite, Debug, PartialEq)]
 struct BreakfastStr {
-    str: String,
-    bytes: binprot::Bytes,
+    str: binprot::SmallString1k,
+    bytes: binprot::SmallBytes1k,
 }
 #[test]
 fn breakfast_str() {
     let breakfast_str =
-        BreakfastStr { str: "pancakes".to_string(), bytes: "more-pancakes".to_string().into() };
+        BreakfastStr { str: "pancakes".into(), bytes: "more-pancakes".as_bytes().to_vec().into() };
     let expected = [
         8, 112, 97, 110, 99, 97, 107, 101, 115, 13, 109, 111, 114, 101, 45, 112, 97, 110, 99, 97,
         107, 101, 115,
     ];
     test_roundtrip(breakfast_str, 23, Some(&expected));
 
-    let bytes: binprot::Bytes = vec![0, 255, 1, 254].into();
+    let bytes: binprot::SmallBytes1k = vec![0, 255, 1, 254].into();
     let mut data: Vec<u8> = Vec::new();
     bytes.binprot_write(&mut data).unwrap();
     let mut slice = data.as_slice();
     assert_eq!(slice, [4, 0, 255, 1, 254]);
-    let bytes2 = binprot::Bytes::binprot_read(&mut slice).unwrap();
+    let bytes2 = binprot::SmallBytes1k::binprot_read(&mut slice).unwrap();
     assert_eq!(bytes, bytes2);
 
     // The bytes data is not utf8 encoded so result in an error when using String.
-    let err = String::binprot_read(&mut data.as_slice());
+    let err = binprot::SmallString1k::binprot_read(&mut data.as_slice());
     assert!(err.is_err())
 }

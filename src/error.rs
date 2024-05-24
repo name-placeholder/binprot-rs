@@ -15,6 +15,7 @@ pub enum Error {
     Utf8Error(std::str::Utf8Error),
     SameKeyAppearsTwiceInMap,
     TryFromIntError(std::num::TryFromIntError),
+    TooMuchData(u64),
     /// For errors raised by custom decoders.
     CustomError(Box<dyn std::error::Error + Sync + Send>),
 }

@@ -15,7 +15,7 @@ struct Handshake(Vec<i64>);
 
 #[derive(BinProtRead, BinProtWrite, Clone, PartialEq)]
 enum Sexp {
-    Atom(String),
+    Atom(binprot::SmallString1k),
     List(Vec<Sexp>),
 }
 

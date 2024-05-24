@@ -47,23 +47,38 @@ pub fn binprot_read_with_size<R: Read, B: BinProtRead>(r: &mut R) -> Result<B, E
 pub struct Nat0(pub u64);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Bytes(pub Vec<u8>);
+pub struct SmallBytes1k(pub Vec<u8>);
 
-impl std::convert::From<String> for Bytes {
+impl std::convert::From<String> for SmallBytes1k {
     fn from(str: String) -> Self {
-        Bytes(str.into_bytes())
+        SmallBytes1k(str.into_bytes())
     }
 }
 
-impl std::convert::From<&str> for Bytes {
+impl std::convert::From<&str> for SmallBytes1k {
     fn from(str: &str) -> Self {
-        Bytes(str.as_bytes().to_vec())
+        SmallBytes1k(str.as_bytes().to_vec())
     }
 }
 
-impl std::convert::From<Vec<u8>> for Bytes {
+impl std::convert::From<Vec<u8>> for SmallBytes1k {
     fn from(v: Vec<u8>) -> Self {
-        Bytes(v)
+        SmallBytes1k(v)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SmallString1k(pub String);
+
+impl std::convert::From<String> for SmallString1k {
+    fn from(str: String) -> Self {
+        SmallString1k(str.to_string())
+    }
+}
+
+impl std::convert::From<&str> for SmallString1k {
+    fn from(str: &str) -> Self {
+        SmallString1k(str.to_string())
     }
 }
 
@@ -167,9 +182,9 @@ impl<T: BinProtWrite> BinProtWrite for &[T] {
     }
 }
 
-impl BinProtWrite for String {
+impl BinProtWrite for SmallString1k {
     fn binprot_write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
-        let bytes = self.as_bytes();
+        let bytes = self.0.as_bytes();
         int::write_nat0(w, bytes.len() as u64)?;
         w.write_all(bytes)
     }
@@ -183,7 +198,7 @@ impl BinProtWrite for &str {
     }
 }
 
-impl BinProtWrite for Bytes {
+impl BinProtWrite for SmallBytes1k {
     fn binprot_write<W: Write>(&self, w: &mut W) -> std::io::Result<()> {
         let bytes = &self.0;
         int::write_nat0(w, bytes.len() as u64)?;
@@ -447,28 +462,36 @@ impl<K: BinProtRead + Hash + Eq, V: BinProtRead> BinProtRead for std::collection
     }
 }
 
-impl BinProtRead for String {
+// NOTE: Removed because of potential for unbounded allocations
+impl BinProtRead for SmallString1k {
     fn binprot_read<R: Read + ?Sized>(r: &mut R) -> Result<Self, Error>
     where
         Self: Sized,
     {
         let len = int::read_nat0(r)?;
+        if len > 1_000 {
+            return Err(Error::TooMuchData(len));
+        }
         let mut buf: Vec<u8> = vec![0u8; len as usize];
         r.read_exact(&mut buf)?;
         let str = std::str::from_utf8(&buf)?;
-        Ok(str.to_string())
+        Ok(SmallString1k(str.to_string()))
     }
 }
 
-impl BinProtRead for Bytes {
+// NOTE: Removed because of potential for unbounded allocations
+impl BinProtRead for SmallBytes1k {
     fn binprot_read<R: Read + ?Sized>(r: &mut R) -> Result<Self, Error>
     where
         Self: Sized,
     {
         let len = int::read_nat0(r)?;
+        if len > 1_000 {
+            return Err(Error::TooMuchData(len));
+        }
         let mut buf: Vec<u8> = vec![0u8; len as usize];
         r.read_exact(&mut buf)?;
-        Ok(Bytes(buf))
+        Ok(SmallBytes1k(buf))
     }
 }
 
